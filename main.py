@@ -1,87 +1,78 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from config import Config
 import pymysql
-from config import config
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config.from_object(config)
-app.secret_key = app.config["SECRET_KEY"]
+app.config.from_object(Config)
+app.secret_key = app.config['SECRET_KEY'] 
 
 def get_db_connection():
-  return pymysql.connect(
-    host = app.config["MYSQL_HOST"],
-    user= app.config["MYSQL_USER"],
-    password= app.config["MYSQL_PASSWORD"],
-    database= app.config["MYQL_DATABASE"],
-    port= app.config["MYSQL_PORT"]
-  )
-
-app = Flask(__name__)
-app.secret_key = "red"
-app.secret_key = app.config["SECRET_KEY"]
-
-users = {}  #this will take one user in a session
-
+    return pymysql.connect(
+        host=app.config['DB_HOST'],
+        user=app.config['DB_USER'],
+        password=app.config['DB_PASSWORD'],
+        db=app.config['DB_NAME'],
+        cursorclass=pymysql.cursors.DictCursor
+    )
+    
 @app.route("/")
 def home():
-    return redirect(url_for("index"))
-
-@app.route("/index")
-def index():
-    return render_template("index.html")
-
+    return render_template("register.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        u = request.form["username"]
-        p = request.form["password"]
-        
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+
+        hashed_password = generate_password_hash(password) #converts password into a hash value
+
         conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("select id from users where username = %s",(u,))
-        existing = cur.cursor()
+        cur = conn.cursor() #####
+        cur.execute("INSERT INTO users (username, email, password) VALUES (%s, %s, %s)", (username, email, hashed_password))
         
-        if existing:
-          cur.close()
-          conn.close()
-          return render_template("register.html", msg="User  exists!")
-        
-        
-        cur.execute("insert into users(username,password) values(%s,%s)", (u,p))
-        cur.commit()
-        cur.close()
+        conn.commit()
         conn.close()
-        return redirect(url_for("login"))
+        return render_template("dashboard.html")
 
     return render_template("register.html")
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        u = request.form["username"]
-        p = request.form["password"]
+    if request.method== "POST":
+        email=request.form["email"]
+        password= request.form["password"]
 
-        if users.get(u) == p:
-            session["user"] = u
+        conn=get_db_connection()
+        cur=conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email=%s", (email,))
+
+        user=cur.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['username']  
             return redirect(url_for("dashboard"))
-
-        return render_template("login.html", msg="Invalid login!")
-
     return render_template("login.html")
+        
 
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
-@app.route("/dashboard")
+@app.route("/course")
+def course():
+    return render_template("course.html")
+
+@app.route("/dashboard", methods=["GET", "POST"])
 def dashboard():
-    if "user" not in session:
+    if 'user_id' not in session:
         return redirect(url_for("login"))
-    return render_template("dashboard.html", user=session["user"])
 
-
-@app.route("/logout")
-def logout():
-    session.pop("user", None)
-    return redirect(url_for("login"))
+    return render_template("dashboard.html")
 
 
 if __name__ == "__main__":
