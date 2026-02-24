@@ -2,10 +2,19 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from config import Config
 import pymysql
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_required, logout_user, current_user 
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.secret_key = app.config['SECRET_KEY'] 
+#app.secret_key = app.config['SECRET_KEY'] 
+red = LoginManager()
+red.init_app(app)
+red.login_view = "login"
+
+class User(UserMixin):
+    def __init__(self,id,username):
+        self.id = id
+        self.username = username
 
 def get_db_connection():
     return pymysql.connect(
@@ -72,7 +81,7 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for("login"))
 
-    return render_template("dashboard.html")
+    return render_template("dashboard.html")  
 
 
 if __name__ == "__main__":
