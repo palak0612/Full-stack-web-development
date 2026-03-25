@@ -1,17 +1,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}" />
-
 <div class="auth-container">
-  <h2>Login</h2>
-
-  {% with messages = get_flashed_messages() %} {% if messages %}
-  <p style="color: red; text-align: center">{{ messages[-1] }}</p>
-  {% endif %} {% endwith %}
+  <h2>Signup</h2>
 
   <form method="POST">
     <input name="username" placeholder="Username" />
+    <input name="email" placeholder="Email" />
     <input type="password" name="password" placeholder="Password" />
-    <button>Login</button>
+
+    <button>Signup</button>
   </form>
 
-  <p>Don't have an account? <a href="/signup">Signup</a></p>
+  <p>Already have an account? <a href="/login">Login</a></p>
 </div>
